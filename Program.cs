@@ -1,12 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using System;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using edusync.Models;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddDbContext<EduSyncDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
 // Configure CORS policy
 builder.Services.AddCors(options =>
 {
@@ -18,6 +22,24 @@ builder.Services.AddCors(options =>
               .AllowCredentials(); // Allow credentials if needed
     });
 });
+
+// Add Authentication services for JWT
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:SecretKey"]))
+        };
+    });
 
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
@@ -35,8 +57,8 @@ if (app.Environment.IsDevelopment())
 // Enable CORS globally
 app.UseCors("AllowLocalhost5173");
 
-app.UseHttpsRedirection();
-
+// Enable Authentication and Authorization
+app.UseAuthentication(); // Adds JWT authentication middleware
 app.UseAuthorization();
 
 app.MapControllers();

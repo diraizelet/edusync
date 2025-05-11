@@ -19,10 +19,6 @@ public partial class EduSyncDbContext : DbContext
 
     public virtual DbSet<Course> Courses { get; set; }
 
-    public virtual DbSet<Student> Students { get; set; }
-
-    public virtual DbSet<Teacher> Teachers { get; set; }
-
     public virtual DbSet<User> Users { get; set; }
     public virtual DbSet<Result> Results { get; set; }
 
@@ -50,23 +46,7 @@ public partial class EduSyncDbContext : DbContext
             entity.Property(e => e.updated_at).HasDefaultValueSql("(getdate())");
         });
 
-        modelBuilder.Entity<Student>(entity =>
-        {
-            entity.HasKey(e => e.id).HasName("PK__Students__3213E83F67B149A1");
-
-            entity.Property(e => e.id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.created_at).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.num_assessments_attended).HasDefaultValue(0);
-            entity.Property(e => e.num_courses_completed).HasDefaultValue(0);
-        });
-
-        modelBuilder.Entity<Teacher>(entity =>
-        {
-            entity.HasKey(e => e.id).HasName("PK__Teachers__3213E83FA5DCFA83");
-
-            entity.Property(e => e.id).HasDefaultValueSql("(newid())");
-            entity.Property(e => e.created_at).HasDefaultValueSql("(getdate())");
-        });
+        
 
         modelBuilder.Entity<User>(entity =>
         {

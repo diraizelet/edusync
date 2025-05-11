@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using edusync.Models;
+using Microsoft.Extensions.Configuration; // Add this
+using System.IdentityModel.Tokens.Jwt;
 
 namespace edusync.Controllers
 {
@@ -14,10 +16,13 @@ namespace edusync.Controllers
     public class UsersController : ControllerBase
     {
         private readonly EduSyncDbContext _context;
+        private readonly IConfiguration _configuration; // Add this
 
-        public UsersController(EduSyncDbContext context)
+        // Inject IConfiguration in the constructor
+        public UsersController(EduSyncDbContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration; // Initialize _configuration
         }
 
         // GET: api/Users
@@ -42,7 +47,6 @@ namespace edusync.Controllers
         }
 
         // PUT: api/Users/5
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
         public async Task<IActionResult> PutUser(Guid id, User user)
         {
@@ -73,7 +77,6 @@ namespace edusync.Controllers
         }
 
         // POST: api/Users
-        // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
         public async Task<ActionResult<User>> PostUser(User user)
         {
@@ -103,6 +106,7 @@ namespace edusync.Controllers
         {
             return _context.Users.Any(e => e.UserId == id);
         }
+
         public class LoginDto
         {
             public string Email { get; set; }
@@ -110,20 +114,31 @@ namespace edusync.Controllers
         }
 
         [HttpPost("signup")]
-        public async Task<ActionResult<User>> Signup([FromBody] User user)
+        public async Task<IActionResult> Signup([FromBody] User user)
         {
-            // Check if user already exists
             if (await _context.Users.AnyAsync(u => u.Email == user.Email))
             {
-                return Conflict("Email is already registered.");
+                return Conflict(new { message = "Email is already registered." });
             }
 
-            // Add new user
             user.UserId = Guid.NewGuid();
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetUser), new { id = user.UserId }, user);
+            // Generate JWT token after user is created
+            var token = JwtHelper.GenerateJwtToken(user.UserId.ToString(), user.Name, user.Role, _configuration); // Use _configuration here
+
+            return Ok(new
+            {
+                token,
+                user = new
+                {
+                    id = user.UserId,
+                    name = user.Name,
+                    email = user.Email,
+                    role = user.Role
+                }
+            });
         }
 
         // POST: api/Users/login
@@ -136,13 +151,24 @@ namespace edusync.Controllers
 
             if (user == null)
             {
-                // Return a JSON object with a message
                 return Unauthorized(new { message = "Invalid email or password." });
             }
 
-            // Return a JWT token in a valid JSON response
-            return Ok(new { token = "your-jwt-token-here" });
-        }
+            // Generate the JWT token after validating the credentials
+            var token = JwtHelper.GenerateJwtToken(user.UserId.ToString(), user.Name, user.Role, _configuration);
 
+            // Return the token and user info in the response
+            return Ok(new
+            {
+                token,
+                user = new
+                {
+                    id = user.UserId,
+                    name = user.Name,
+                    email = user.Email,
+                    role = user.Role
+                }
+            });
+        }
     }
 }
