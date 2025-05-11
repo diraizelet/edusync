@@ -46,7 +46,7 @@ public partial class EduSyncDbContext : DbContext
             entity.Property(e => e.updated_at).HasDefaultValueSql("(getdate())");
         });
 
-        
+            
 
         modelBuilder.Entity<User>(entity =>
         {

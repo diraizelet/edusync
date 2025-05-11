@@ -10,6 +10,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddDbContext<EduSyncDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.Configure<BlobStorageSettings>(
+    builder.Configuration.GetSection("AzureBlobStorage"));
+builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 
 // Configure CORS policy
 builder.Services.AddCors(options =>
@@ -22,6 +25,7 @@ builder.Services.AddCors(options =>
               .AllowCredentials(); // Allow credentials if needed
     });
 });
+builder.Services.AddLogging();
 
 // Add Authentication services for JWT
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -56,6 +60,7 @@ if (app.Environment.IsDevelopment())
 
 // Enable CORS globally
 app.UseCors("AllowLocalhost5173");
+app.UseStaticFiles();
 
 // Enable Authentication and Authorization
 app.UseAuthentication(); // Adds JWT authentication middleware
