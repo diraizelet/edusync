@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using edusync.Models;
 using Microsoft.Extensions.Configuration; // Add this
 using System.IdentityModel.Tokens.Jwt;
+using Microsoft.AspNetCore.Authorization;
+using System.Security.Claims;
 
 namespace edusync.Controllers
 {
@@ -23,6 +25,41 @@ namespace edusync.Controllers
         {
             _context = context;
             _configuration = configuration; // Initialize _configuration
+        }
+        // GET: api/Users/me
+        [HttpGet("me")]
+        [Authorize] // Ensure only authenticated users can access this endpoint
+        public async Task<ActionResult<User>> GetUserFromToken()
+        {
+            try
+            {
+                // Get the user ID from the JWT token
+                var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier); // This gets the user ID from the token
+                if (userIdClaim == null)
+                {
+                    return Unauthorized(new { message = "Token is missing or invalid" });
+                }
+
+                var userId = Guid.Parse(userIdClaim.Value);
+                var user = await _context.Users.FindAsync(userId);
+
+                if (user == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(new
+                {
+                    id = user.UserId,
+                    name = user.Name,
+                    email = user.Email,
+                    role = user.Role
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred", error = ex.Message });
+            }
         }
 
         // GET: api/Users
